@@ -14,7 +14,6 @@ import azure.functions as func
 import requests
 from azure.core.exceptions import ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 from azure.storage.blob import BlobServiceClient
 from shapely.geometry import mapping, shape
 
@@ -22,15 +21,8 @@ from arcgis_harvester.constants import *
 
 # Get variables from Azure Function configuration
 AZURE_CONNECT_STR = os.getenv("StorageAccountConnectionString")
-AZURE_VAULT_URL = os.getenv("KeyVaultURL")
-
-# Initialize Secret Client
-credential = DefaultAzureCredential()
-secret_client = SecretClient(vault_url=AZURE_VAULT_URL, credential=credential)
-
-# Get secret variables from the Azure Key Vault
-ARCGIS_USERNAME = secret_client.get_secret("arcgis-username").value
-ARCGIS_PASSWORD = secret_client.get_secret("arcgis-password").value
+ARCGIS_USERNAME = os.getenv("ArcGISUsername")
+ARCGIS_PASSWORD = os.getenv("ArcGISPassword")
 
 # Constants for ArcGIS API
 QUERY_PARAMS = {
@@ -155,10 +147,10 @@ def main(mytimer: func.TimerRequest) -> None:
 
     logging.info("Python timer trigger function ran at %s", utc_timestamp)
 
-    token = fetch_token()
-    if not token:
-        logging.error("No token received, terminating function.")
-        return
+    if ARCGIS_PASSWORD and ARCGIS_USERNAME:
+        token = fetch_token()
+    else:
+        token = None
 
     for layer in LAYERS_TO_IMPORT:
         logging.info("Processing layer: %s", layer)
