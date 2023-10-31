@@ -18,7 +18,7 @@ The python code is tested locally before deploying it to the environment of Azur
 ## To test the function we use VS Code and Postman using the following steps:
 
 1. Install the Azure Functions extension in Visual Studio Code
-2. Clone (or pull) the repor from GitHub
+2. Clone (or pull) the repo from GitHub
 3. Open the repo folder in Visual Studio Code
 
 ## To sync down app settings from Azure:
