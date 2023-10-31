@@ -6,6 +6,11 @@ We use the Azure Functions extension in Visual Studio Code to write Python code 
 
 The python code is tested locally before deploying it to the environment of Azure Functions.
 
+## Prerequisites
+
+-  An Azure Key Vault with ArcGIS credentials stored as `arcgis_username` and `arcgis_password`.
+-  An Azure Function App `$FUNCTION_APP` already configured, with a setting called `KeyVaultURL`.
+
 ## To see the function in Azure Portal:
 
 -  Open Azure Portal
