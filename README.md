@@ -6,6 +6,14 @@ We use the Azure Functions extension in Visual Studio Code to write Python code 
 
 The python code is tested locally before deploying it to the environment of Azure Functions.
 
+## Pre-requisites
+
+Create an Azure function app with the required settings:
+
+- `StorageAccountConnectionString`
+- `ArcGISUsername`
+- `ArcGISPassword`
+
 ## To see the function in Azure Portal:
 
 -  Open Azure Portal
@@ -18,22 +26,14 @@ The python code is tested locally before deploying it to the environment of Azur
 ## To test the function we use VS Code and Postman using the following steps:
 
 1. Install the Azure Functions extension in Visual Studio Code
-2. Clone (or pull) the repor from GitHub
+2. Clone (or pull) the repo from GitHub
 3. Open the repo folder in Visual Studio Code
 
 ## To sync down app settings from Azure:
+Assumes all the required settings have been added.
 
 ```bash
-func azure functionapp fetch-app-settings $FUNCTION_APP
-```
-
-## If needed, add ArcGIS credentials to the Azure Vault
-
-```bash
-export KEY_VAULT_NAME=$(jq -r .Values.KeyVaultURL local.settings.json | awk -F[/:] '{print $4}' | awk -F[.:] '{print $1}')
-az login
-az keyvault secret set --vault-name $KEY_VAULT_NAME --name "arcgis-username" --value $ARCGIS_USERNAME
-az keyvault secret set --vault-name $KEY_VAULT_NAME --name "arcgis-password" --value $ARCGIS_PASSWORD
+func azure functionapp fetch-app-settings $ARCGIS_HARVESTER_FUNCTION_APP
 ```
 
 ## To run the function locally in the VS Code terminal:
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 func start
 ```
 
-#### In Windows to activaste the virtual environment
+#### In Windows to activate the virtual environment
 
 ```bash
 .venv/Scripts/Activate.ps1
