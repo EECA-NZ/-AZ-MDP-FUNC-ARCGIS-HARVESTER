@@ -29,7 +29,7 @@ The python code is tested locally before deploying it to the environment of Azur
 ## To sync down app settings from Azure:
 
 ```bash
-func azure functionapp fetch-app-settings $FUNCTION_APP
+func azure functionapp fetch-app-settings $ARCGIS_HARVESTER_FUNCTION_APP
 ```
 
 ## If needed, add ArcGIS credentials to the Azure Vault
