@@ -10,9 +10,9 @@ The data is then saved to Blob Storage as CSV files for ingestion into our SQL d
 
 ## How it works
 
-The function uses a `TimerTrigger` to run at a set schedule. This is defined by a [cron expression](https://en.wikipedia.org/wiki/Cron#CRON_expression) that specifies the timing for function execution.
+The function uses a `TimerTrigger` to run at a set schedule. This is defined by a [NCrontab expression](https://github.com/atifaziz/NCrontab) that specifies the timing for function execution.
 
-For example, a cron expression like `0 0 7 * * Monday` means: "Run this function at 7 AM every Monday".
+For example, a cron expression like `0 0 7 * * *` means: "Run this function at 7 AM everyday". You can test your NCrontab exoression [here](https://ncrontab.swimburger.net/).
 
 ## Set Up and Execution
 
