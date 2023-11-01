@@ -33,6 +33,7 @@ Create an Azure function app with the required settings:
 Assumes all the required settings have been added.
 
 ```bash
+export ARCGIS_HARVESTER_FUNCTION_APP=<name of your function app>
 func azure functionapp fetch-app-settings $ARCGIS_HARVESTER_FUNCTION_APP
 ```
 
