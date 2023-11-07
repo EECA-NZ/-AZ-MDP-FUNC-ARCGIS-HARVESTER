@@ -11,7 +11,7 @@ The python code is tested locally before deploying it to the environment of Azur
 Create an Azure function app with the required settings:
 
 ### Azure Storage connection string
-[How to configure a connection string](https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account))
+[How to configure a connection string](https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account)
 - `StorageAccountConnectionString`
 
 ### ArcGIS user and password
