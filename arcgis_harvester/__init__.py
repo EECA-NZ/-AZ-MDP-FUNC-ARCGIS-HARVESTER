@@ -120,16 +120,17 @@ def fetch_metadata_from_blob(metadata_name):
         return []
 
 
-def upload_to_blob(csv_data, csv_name):
-    blob_file_path = CSV_FILE_PATH_PREFIX + "/" + csv_name
-    blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECT_STR)
+def upload_to_blob(connection_string, container_name, blob_path_prefix, blob_name, blob_data):
+    blob_file_path = blob_path_prefix + "/" + blob_name
+
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
     blob_client = blob_service_client.get_blob_client(
-        container=CONTAINER_NAME, blob=blob_file_path
+        container=container_name, blob=blob_file_path
     )
 
     # Convert the StringIO object to bytes and upload
-    csv_data.seek(0)
-    blob_client.upload_blob(csv_data.read().encode("utf-8"), overwrite=True)
+    blob_data.seek(0)
+    blob_client.upload_blob(blob_data.read().encode("utf-8"), overwrite=True)
 
 
 def dict_to_file(metadata_dict):
@@ -220,9 +221,9 @@ def main(mytimer: func.TimerRequest) -> None:
         if data:
             csv_file = write_to_csv(data)
             metadata_file = dict_to_file(metadata)
-
-            upload_to_blob(metadata_file, metadata_name)
-            upload_to_blob(csv_file, csv_name)
+            
+            upload_to_blob(AZURE_CONNECT_STR, CONTAINER_NAME, CSV_FILE_PATH_PREFIX, metadata_name, metadata_file)
+            upload_to_blob(AZURE_CONNECT_STR, CONTAINER_NAME, CSV_FILE_PATH_PREFIX, csv_name, csv_file)
 
             logging.info(
                 "Metadata fetched and saved to %s successfully.", metadata_name
