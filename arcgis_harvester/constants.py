@@ -1,5 +1,5 @@
 """
-This module has the constants that are needed to configure the funcion
+This module has the constants that are needed to configure the function
 """
 
 CONTAINER_NAME = "bill-nelson-dev"
