@@ -1,3 +1,5 @@
+[![Pylint](https://github.com/EECA-NZ/AZ-MDP-FUNC-ARCGIS-HARVESTER/actions/workflows/pylint.yml/badge.svg)](https://github.com/EECA-NZ/AZ-MDP-FUNC-ARCGIS-HARVESTER/actions/workflows/pylint.yml) [![Deploy to dev](https://github.com/EECA-NZ/AZ-MDP-FUNC-ARCGIS-HARVESTER/actions/workflows/deploy-to-dev.yml/badge.svg)](https://github.com/EECA-NZ/AZ-MDP-FUNC-ARCGIS-HARVESTER/actions/workflows/deploy-to-dev.yml)
+
 # AZ-MDP-FUNC-ARCGIS-HARVESTER
 
 Azure function to harvest data from an ArcGIS API
