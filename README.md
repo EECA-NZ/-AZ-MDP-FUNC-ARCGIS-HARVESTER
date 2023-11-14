@@ -68,3 +68,9 @@ func start
 ```bash
 .venv/Scripts/Activate.ps1
 ```
+
+## To run the unit tests
+
+```bash
+pytest
+```
