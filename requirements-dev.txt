@@ -1,3 +1,4 @@
 # Requirements to develop and test
 
 pytest
+pytest-mock
