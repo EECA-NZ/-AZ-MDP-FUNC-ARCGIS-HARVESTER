@@ -1,6 +1,6 @@
-'''
+"""
 Tests for arcgis_harvester function
-'''
+"""
 
 from unittest.mock import patch
 
@@ -15,7 +15,7 @@ from arcgis_harvester import (
 
 
 def test_fetch_token_success():
-    '''Fetch token successfully'''
+    """Fetch token successfully"""
     with patch("requests.post") as mocked_post:
         mocked_post.return_value.status_code = 200
         mocked_post.return_value.json.return_value = {"token": "some-token"}
@@ -24,7 +24,7 @@ def test_fetch_token_success():
 
 
 def test_fetch_token_failure():
-    '''Fetch token unsuccessfully'''
+    """Fetch token unsuccessfully"""
     with patch("requests.post") as mocked_post:
         mocked_post.return_value.status_code = 200
         mocked_post.return_value.json.return_value = {"error": "some-error"}
@@ -33,7 +33,7 @@ def test_fetch_token_failure():
 
 
 def test_fetch_metadata_from_layer_success():
-    '''Fetch metadata successfully'''
+    """Fetch metadata successfully"""
     token = "test-token"
     layer_url = "http://fake-url.com/layer"
     expected_metadata = {"name": "test-layer", "type": "Feature Layer"}
@@ -46,7 +46,7 @@ def test_fetch_metadata_from_layer_success():
 
 
 def test_write_to_csv():
-    '''Write to csv successfully'''
+    """Write to csv successfully"""
     data = [
         {
             "properties": {"prop1": "value1", "prop2": "value2"},
@@ -63,14 +63,14 @@ def test_write_to_csv():
 
 @pytest.fixture
 def blob_service_client_mock():
-    '''Mock the blob service client'''
+    """Mock the blob service client"""
     # Mock for Azure BlobServiceClient
     with patch("azure.storage.blob.BlobServiceClient") as mock:
         yield mock
 
 
 def test_upload_to_blob(mocker):
-    '''Upload to blob successfully'''
+    """Upload to blob successfully"""
     # Arrange
     connection_string = "DefaultEndpointsProtocol=https;AccountName=..."
     container_name = "my-container"
@@ -99,9 +99,9 @@ def test_upload_to_blob(mocker):
 
     # Verify get_blob_client called with the correct container and blob path
     expected_blob_path = f"{blob_path_prefix}/{blob_name}"
-    mock_blob_service_client.from_connection_string.return_value\
-        .get_blob_client.assert_called_once_with(
-            container=container_name, blob=expected_blob_path
+    blob_client = mock_blob_service_client.from_connection_string.return_value.get_blob_client
+    blob_client.assert_called_once_with(
+        container=container_name, blob=expected_blob_path
     )
 
     # Verify blob_data.seek(0) was called to ensure the data is read from the beginning
