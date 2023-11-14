@@ -41,45 +41,45 @@ AUTH_PARAMS = {
 }
 
 
-def fetch_token():
+def __fetch_token():
     response = requests.post(AUTH_URL, data=AUTH_PARAMS, timeout=30)
     response.raise_for_status()
     token_data = response.json()
-    if "token" in token_data:
-        return token_data["token"]
-    else:
+    if "token" not in token_data:
         logging.error("Failed to fetch token: %s", token_data.get("error", ""))
         return None
 
+    return token_data["token"]
 
-def fetch_metadata_from_layer(layer_url, token):
+
+def __fetch_metadata_from_layer(layer_url, token):
     params = {"f": "json", "token": token}
     response = requests.get(layer_url, params=params, timeout=30)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
+    if response.status_code != 200:
         logging.error("Invalid response = %s", response.status_code)
         return []
 
+    data = response.json()
+    return data
 
-def fetch_data_from_layer(layer_url, token):
+
+def __fetch_data_from_layer(layer_url, token):
     query_url = layer_url + "/query"
     params = {**QUERY_PARAMS, "token": token}
     response = requests.get(query_url, params=params, timeout=30)
-    if response.status_code == 200:
-        data = response.json()
-        if "features" in data:
-            return data["features"]
-        else:
-            logging.error("Error retrieving features: %s", data.get("error", ""))
-            return []
-    else:
+    if response.status_code != 200:
         logging.error("Invalid response = %s", response.status_code)
         return []
 
+    data = response.json()
+    if "features" not in data:
+        logging.error("Error retrieving features: %s", data.get("error", ""))
+        return []
 
-def write_to_csv(data):
+    return data["features"]
+
+
+def __write_to_csv(data):
     output = io.StringIO()
     attributes = data[0]["properties"].keys()
     fieldnames = list(attributes) + ["geometry"]
@@ -97,7 +97,7 @@ def write_to_csv(data):
     return output
 
 
-def fetch_metadata_from_blob(metadata_name):
+def __fetch_metadata_from_blob(metadata_name):
     try:
         blob_file_path = CSV_FILE_PATH_PREFIX + "/" + metadata_name
         blob_service_client = BlobServiceClient.from_connection_string(
@@ -120,7 +120,7 @@ def fetch_metadata_from_blob(metadata_name):
         return []
 
 
-def upload_to_blob(csv_data, csv_name):
+def __upload_to_blob(csv_data, csv_name):
     blob_file_path = CSV_FILE_PATH_PREFIX + "/" + csv_name
     blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECT_STR)
     blob_client = blob_service_client.get_blob_client(
@@ -132,101 +132,72 @@ def upload_to_blob(csv_data, csv_name):
     blob_client.upload_blob(csv_data.read().encode("utf-8"), overwrite=True)
 
 
-def dict_to_file(metadata_dict):
+def __dict_to_file(metadata_dict):
     metadata_str = json.dumps(metadata_dict)  # Convert dictionary to string
     return io.StringIO(metadata_str)  # Convert string to file-like object
 
 
-def main(mytimer: func.TimerRequest) -> None:
+def __get_nested_key(data, *keys, default=None):
+    try:
+        for key in keys:
+            data = data[key]
+        return data
+    except KeyError:
+        logging.error("The nested key '%s' does not exist.", keys[-1])
+        return default
+
+
+def __process_layer_data(csv_name, data, metadata_name, metadata):
+    csv_file, metadata_file = __write_to_csv(data), __dict_to_file(metadata)
+    __upload_to_blob(metadata_file, metadata_name)
+    __upload_to_blob(csv_file, csv_name)
+    logging.info("Metadata fetched and saved to %s successfully.", metadata_name)
+    logging.info("Data fetched and saved to %s successfully.", csv_name)
+
+
+def __main(mytimer: func.TimerRequest) -> None:
     utc_timestamp = (
         datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
     )
+    logging.info(
+        "The timer is past due!"
+        if mytimer.past_due
+        else f"Python timer trigger function ran at {utc_timestamp}"
+    )
 
-    if mytimer.past_due:
-        logging.info("The timer is past due!")
-
-    logging.info("Python timer trigger function ran at %s", utc_timestamp)
-
-    if ARCGIS_PASSWORD and ARCGIS_USERNAME:
-        token = fetch_token()
-    else:
-        token = None
+    token = __fetch_token() if ARCGIS_PASSWORD and ARCGIS_USERNAME else None
 
     for layer in LAYERS_TO_IMPORT:
         logging.info("Processing layer: %s", layer)
+        metadata, blob_metadata = __fetch_metadata_from_layer(
+            layer, token
+        ), __fetch_metadata_from_blob(metadata_name)
+        csv_name, metadata_name = (
+            re.sub(r"[^\w]", "_", metadata["name"]) + ".csv",
+            metadata_name + ".json",
+        )
 
-        edit_date = None
-        blob_edit_date = None
+        blob_edit_date = __get_nested_key(
+            blob_metadata, "editingInfo", "lastEditDate", default=None
+        )
+        edit_date = __get_nested_key(
+            metadata, "editingInfo", "lastEditDate", default=None
+        )
 
-        metadata = fetch_metadata_from_layer(layer, token)
-
-        csv_name = re.sub(r"[^\w]", "_", metadata["name"]) + ".csv"
-        metadata_name = csv_name + ".json"
-
-        blob_metadata = fetch_metadata_from_blob(metadata_name)
-
-        if blob_metadata:
-            # Retrieve the last edit date from already imported metadata
-            try:
-                blob_edit_date = blob_metadata["editingInfo"]["lastEditDate"]
-            except KeyError:
-                logging.error(
-                    "The nested key 'lastEditDate' does not exist in %s.", metadata_name
-                )
-        else:
-            logging.info(
-                "No existing metadata found in %s. Will try and import anyway.",
-                CSV_FILE_PATH_PREFIX,
+        if not metadata or metadata.get("type") != "Feature Layer":
+            logging.warning(
+                "Not a feature Layer." if metadata else "Metadata not found."
             )
-
-        if metadata:
-            # Make sure it's a feature layer
-            try:
-                if metadata["type"] != "Feature Layer":
-                    logging.warning("Skipping non Feature Layer")
-                    continue
-            except KeyError:
-                logging.errror(
-                    "The key 'type' does not exist in metadata %s.", metadata_name
-                )
-                continue
-
-            # Retrieve the last edit date from the layer
-            try:
-                edit_date = metadata["editingInfo"]["lastEditDate"]
-            except KeyError:
-                logging.error(
-                    "The nested key 'lastEditDate' does not exist in %s.", layer
-                )
-        else:
-            logging.error("Metadata not found for layer %s.", layer)
             continue
 
-        # Compare the last edit dates
-        if edit_date and blob_edit_date:
-            try:
-                if edit_date <= blob_edit_date:
-                    logging.info("No data updates since last time. Skipping.")
-                    continue
-            except TypeError:
-                logging.warning(
-                    "Type error, could not compare types %s and %s.",
-                    edit_date,
-                    blob_edit_date,
-                )
+        if edit_date and blob_edit_date and edit_date <= blob_edit_date:
+            logging.info("No data updates since last time. Skipping.")
+            continue
 
-        # Retrieve data and write to blob storage
-        data = fetch_data_from_layer(layer, token)
-        if data:
-            csv_file = write_to_csv(data)
-            metadata_file = dict_to_file(metadata)
+        data = __fetch_data_from_layer(layer, token)
 
-            upload_to_blob(metadata_file, metadata_name)
-            upload_to_blob(csv_file, csv_name)
-
-            logging.info(
-                "Metadata fetched and saved to %s successfully.", metadata_name
-            )
-            logging.info("Data fetched and saved to %s successfully.", csv_name)
-        else:
+        if not data:
             logging.error("Failed to fetch data for layer: %s", layer)
+            continue
+
+        __process_layer_data(csv_name, data, metadata_name, metadata)
