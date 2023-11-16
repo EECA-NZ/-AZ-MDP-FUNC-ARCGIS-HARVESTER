@@ -59,6 +59,7 @@ python3 -m venv .venv
 ```bash
 . .venv/bin/activate
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 func start
 ```
 
@@ -66,4 +67,10 @@ func start
 
 ```bash
 .venv/Scripts/Activate.ps1
+```
+
+## To run the unit tests
+
+```bash
+pytest
 ```

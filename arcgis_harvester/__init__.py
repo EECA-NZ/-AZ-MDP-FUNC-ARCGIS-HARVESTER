@@ -120,16 +120,20 @@ def __fetch_metadata_from_blob(metadata_name):
         return []
 
 
-def __upload_to_blob(csv_data, csv_name):
-    blob_file_path = CSV_FILE_PATH_PREFIX + "/" + csv_name
-    blob_service_client = BlobServiceClient.from_connection_string(AZURE_CONNECT_STR)
+def __upload_to_blob(
+    connection_string, container_name, blob_path_prefix, blob_name, blob_data
+):
+    blob_file_path = blob_path_prefix + "/" + blob_name
+
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+
     blob_client = blob_service_client.get_blob_client(
-        container=CONTAINER_NAME, blob=blob_file_path
+        container=container_name, blob=blob_file_path
     )
 
     # Convert the StringIO object to bytes and upload
-    csv_data.seek(0)
-    blob_client.upload_blob(csv_data.read().encode("utf-8"), overwrite=True)
+    blob_data.seek(0)
+    blob_client.upload_blob(blob_data.read().encode("utf-8"), overwrite=True)
 
 
 def __dict_to_file(metadata_dict):
@@ -137,25 +141,21 @@ def __dict_to_file(metadata_dict):
     return io.StringIO(metadata_str)  # Convert string to file-like object
 
 
-def __get_nested_key(data, *keys, default=None):
+def __get_nested_key(data, *keys):
     try:
         for key in keys:
             data = data[key]
         return data
-    except KeyError:
-        logging.error("The nested key '%s' does not exist.", keys[-1])
-        return default
+    except KeyError as e:
+        logging.error("Key error - %s - %s", str(data), str(e))
+        return None
+    except TypeError as e:
+        logging.error("Type error - %s - %s", str(data), str(e))
+        return None
 
 
-def __process_layer_data(csv_name, data, metadata_name, metadata):
-    csv_file, metadata_file = __write_to_csv(data), __dict_to_file(metadata)
-    __upload_to_blob(metadata_file, metadata_name)
-    __upload_to_blob(csv_file, csv_name)
-    logging.info("Metadata fetched and saved to %s successfully.", metadata_name)
-    logging.info("Data fetched and saved to %s successfully.", csv_name)
-
-
-def __main(mytimer: func.TimerRequest) -> None:
+def main(mytimer: func.TimerRequest) -> None:
+    '''Main function'''
     utc_timestamp = (
         datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
     )
@@ -169,20 +169,16 @@ def __main(mytimer: func.TimerRequest) -> None:
 
     for layer in LAYERS_TO_IMPORT:
         logging.info("Processing layer: %s", layer)
-        metadata, blob_metadata = __fetch_metadata_from_layer(
-            layer, token
-        ), __fetch_metadata_from_blob(metadata_name)
-        csv_name, metadata_name = (
-            re.sub(r"[^\w]", "_", metadata["name"]) + ".csv",
-            metadata_name + ".json",
-        )
+        metadata = __fetch_metadata_from_layer(layer, token)
+        csv_name = re.sub(r"[^\w]", "_", metadata["name"]) + ".csv"
+        metadata_name = f"{csv_name}.json"
+        blob_metadata = __fetch_metadata_from_blob(metadata_name)
 
-        blob_edit_date = __get_nested_key(
-            blob_metadata, "editingInfo", "lastEditDate", default=None
+        blob_edit_date = (
+            __get_nested_key(blob_metadata, "editingInfo", "lastEditDate")
+            if blob_metadata else None
         )
-        edit_date = __get_nested_key(
-            metadata, "editingInfo", "lastEditDate", default=None
-        )
+        edit_date = __get_nested_key(metadata, "editingInfo", "lastEditDate")
 
         if not metadata or metadata.get("type") != "Feature Layer":
             logging.warning(
@@ -200,4 +196,15 @@ def __main(mytimer: func.TimerRequest) -> None:
             logging.error("Failed to fetch data for layer: %s", layer)
             continue
 
-        __process_layer_data(csv_name, data, metadata_name, metadata)
+        csv_file, metadata_file = __write_to_csv(data), __dict_to_file(metadata)
+
+        __upload_to_blob(
+            AZURE_CONNECT_STR, CONTAINER_NAME, CSV_FILE_PATH_PREFIX, metadata_name, metadata_file,
+        )
+        __upload_to_blob(
+            AZURE_CONNECT_STR, CONTAINER_NAME, CSV_FILE_PATH_PREFIX, csv_name, csv_file
+        )
+
+        logging.info(
+            "Layer %s processed successfully.", CSV_FILE_PATH_PREFIX
+        )
