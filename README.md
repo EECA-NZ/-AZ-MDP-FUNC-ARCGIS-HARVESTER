@@ -30,6 +30,12 @@ If required, otherwise can be blank.
 -  On the side bar select Functions
 -  Select the function
 
+## Store the function app profile JSON in Github actions
+
+- In Azure portal, select your function app
+- In the 'overview' page click the 'download publis profile' button
+- Store the contents of the json file in Github Actions secret called `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`
+
 ## To test the function we use VS Code and Postman using the following steps:
 
 1. Install the Azure Functions extension in Visual Studio Code
